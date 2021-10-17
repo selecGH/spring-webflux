@@ -10,7 +10,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 @SpringBootApplication
 @Slf4j
@@ -22,7 +24,7 @@ public class ReactorApplication implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) throws Exception {
-		ejemploUsuarioComentariosZipWithForma2();
+		ejemploIntervalInfinito();
 	}
 
 	public void ejemploIterable() {
@@ -132,6 +134,52 @@ public class ReactorApplication implements CommandLineRunner {
 					return new UsuarioComentarios(u, c);
 				})
 				.subscribe(uc -> log.info(uc.toString()));
+	}
+
+	public void ejemploRangeZipWith() {
+		Flux.just(1,2,3,4)
+				.map(i -> i*2)
+				.zipWith(Flux.range(0, 4), (uno, dos) -> String.format("Primer Flux: %d, Segundo Flux: %d", uno, dos))
+				.subscribe(log::info);
+	}
+
+	public void ejemploInterval() {
+		Flux<Integer> rangos = Flux.range(1, 12);
+		Flux<Long> delay = Flux.interval(Duration.ofSeconds(1));
+
+		rangos.zipWith(delay, (ra, re) -> ra)
+				.doOnNext(i -> log.info(i.toString()))
+				.blockLast();
+	}
+
+	public void ejemploIntervalDelayElements() throws InterruptedException {
+		Flux<Integer> rangos = Flux.range(1, 12);
+
+		rangos
+				.delayElements(Duration.ofSeconds(1))
+				.doOnNext(i -> log.info(i.toString()))
+				.subscribe();
+
+		Thread.sleep(13000);
+	}
+
+	public void ejemploIntervalInfinito() throws InterruptedException {
+
+		CountDownLatch latch = new CountDownLatch(1);
+
+		Flux.interval(Duration.ofSeconds(1))
+				.doOnTerminate(latch::countDown)
+				.flatMap(i -> {
+					if (i >= 5) {
+						return Flux.error(new InterruptedException("Solo hasta 5"));
+					}
+					return Flux.just(i);
+				})
+				.map(i -> "Hola " + i)
+				.retry(2)
+				.subscribe(s -> log.info(s), e -> log.error(e.getMessage()));
+
+		latch.await();
 	}
 
 }
