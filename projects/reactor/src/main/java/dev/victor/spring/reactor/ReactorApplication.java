@@ -1,6 +1,8 @@
 package dev.victor.spring.reactor;
 
+import dev.victor.spring.reactor.model.Comentarios;
 import dev.victor.spring.reactor.model.Usuario;
+import dev.victor.spring.reactor.model.UsuarioComentarios;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -20,7 +22,7 @@ public class ReactorApplication implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) throws Exception {
-		convertirString();
+		ejemploUsuarioComentariosZipWithForma2();
 	}
 
 	public void ejemploIterable() {
@@ -82,6 +84,54 @@ public class ReactorApplication implements CommandLineRunner {
 					}
 				})
 				.subscribe(log::info);
+	}
+
+	public void ejemploCollectList() {
+
+		List<Usuario> usuarios = List.of(
+				new Usuario("Víctor", "Apellido1"),
+				new Usuario("Pedro", "Apellido2"),
+				new Usuario("Juan", "Apellido3"),
+				new Usuario("Diego", "Apellido4"),
+				new Usuario("Bárbara", "Apellido5"),
+				new Usuario("Bruno", "Apellido6"));
+
+		Flux.fromIterable(usuarios)
+				.collectList()
+				.subscribe(lista -> log.info(lista.toString()));
+	}
+
+	public void ejemploUsuarioComentariosFlatMap() {
+		Mono<Usuario> usuarioMono = Mono.fromCallable(() -> new Usuario("Jhon", "Doe"));
+		Mono<Comentarios> comentariosMono = Mono.fromCallable(() -> new Comentarios(List.of("Comentario", "Comentario2")));
+
+		usuarioMono
+				.flatMap(u -> comentariosMono.map(c -> new UsuarioComentarios(u, c)))
+				.subscribe(uc -> log.info(uc.toString()));
+	}
+
+	public void ejemploUsuarioComentariosZipWith() {
+		Mono<Usuario> usuarioMono = Mono.fromCallable(() -> new Usuario("Jhon", "Doe"));
+		Mono<Comentarios> comentariosMono = Mono.fromCallable(() -> new Comentarios(List.of("Comentario", "Comentario2")));
+
+		usuarioMono
+				// .zipWith(comentariosMono, (u, c) -> new UsuarioComentarios(u, c)) // Alternative
+				.zipWith(comentariosMono, UsuarioComentarios::new)
+				.subscribe(uc -> log.info(uc.toString()));
+	}
+
+	public void ejemploUsuarioComentariosZipWithForma2() {
+		Mono<Usuario> usuarioMono = Mono.fromCallable(() -> new Usuario("Jhon", "Doe"));
+		Mono<Comentarios> comentariosMono = Mono.fromCallable(() -> new Comentarios(List.of("Comentario", "Comentario2")));
+
+		usuarioMono
+				.zipWith(comentariosMono)
+				.map(tuple -> {
+					Usuario u = tuple.getT1();
+					Comentarios c = tuple.getT2();
+					return new UsuarioComentarios(u, c);
+				})
+				.subscribe(uc -> log.info(uc.toString()));
 	}
 
 }
