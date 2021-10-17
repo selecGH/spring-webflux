@@ -4,6 +4,8 @@ import dev.victor.spring.reactor.model.Comentarios;
 import dev.victor.spring.reactor.model.Usuario;
 import dev.victor.spring.reactor.model.UsuarioComentarios;
 import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -12,6 +14,8 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 
 @SpringBootApplication
@@ -24,7 +28,7 @@ public class ReactorApplication implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) throws Exception {
-		ejemploIntervalInfinito();
+		ejemploBackPressure2();
 	}
 
 	public void ejemploIterable() {
@@ -180,6 +184,81 @@ public class ReactorApplication implements CommandLineRunner {
 				.subscribe(s -> log.info(s), e -> log.error(e.getMessage()));
 
 		latch.await();
+	}
+
+	public void ejemploIntervalInfinitoCreate() throws InterruptedException {
+		Flux.create(emitter -> {
+			Timer timer = new Timer();
+			timer.schedule(new TimerTask() {
+
+				private Integer contador = 0;
+
+				@Override
+				public void run() {
+					emitter.next(++contador);
+					if (contador == 10) {
+						timer.cancel();
+						emitter.complete();
+					}
+
+					if (contador == 5) {
+						timer.cancel();
+						emitter.error(new InterruptedException("Error, se ha detenido el flux en 5."));
+					}
+				}
+
+			}, 1000, 1000);
+		})
+		.subscribe(next -> log.info(next.toString()),
+				e -> log.error(e.getMessage()),
+				() -> log.info("Complete."));
+	}
+
+	public void ejemploBackPressure() {
+		Flux.range(1, 10)
+				.log()
+				.subscribe(new Subscriber<>() {
+
+					private Subscription subscription;
+
+					private Integer limite = 5;
+					private Integer consumido = 0;
+
+					@Override
+					public void onSubscribe(Subscription s) {
+						this.subscription = s;
+						subscription.request(limite);
+
+					}
+
+					@Override
+					public void onNext(Integer integer) {
+						log.info(integer.toString());
+						consumido++;
+						if (consumido.equals(limite)) {
+							consumido = 0;
+							subscription.request(limite);
+						}
+					}
+
+					@Override
+					public void onError(Throwable t) {
+
+					}
+
+					@Override
+					public void onComplete() {
+
+					}
+
+				});
+	}
+
+	public void ejemploBackPressure2() {
+		Flux.range(1, 10)
+				.log()
+				.limitRate(2)
+				.subscribe();
 	}
 
 }
