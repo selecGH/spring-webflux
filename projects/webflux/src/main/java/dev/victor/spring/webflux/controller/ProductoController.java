@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import reactor.core.publisher.Flux;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/products")
@@ -24,6 +27,8 @@ public class ProductoController {
         });
         model.addAttribute("productos", productos);
         model.addAttribute("titulo", "Lista de productos");
+        LocalDateTime.parse("StringFecha", DateTimeFormatter.ofPattern("DD/MM/YYYY"));
+        
         return "listar";
     }
 

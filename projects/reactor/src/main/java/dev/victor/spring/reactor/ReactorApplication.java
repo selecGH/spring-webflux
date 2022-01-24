@@ -228,7 +228,6 @@ public class ReactorApplication implements CommandLineRunner {
 					public void onSubscribe(Subscription s) {
 						this.subscription = s;
 						subscription.request(limite);
-
 					}
 
 					@Override
